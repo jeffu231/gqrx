@@ -90,6 +90,8 @@ private:
 
     bool d_have_audio;  /*!< Whether we have audio (i.e. not with demod_off. */
 
+    bool d_fixed_hw_freq = true;
+
     /* dock widgets */
     DockRxOpt      *uiDockRxOpt;
     DockAudio      *uiDockAudio;
