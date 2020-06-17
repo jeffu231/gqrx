@@ -469,6 +469,13 @@ bool MainWindow::loadConfig(const QString cfgfile, bool check_crash,
         restoreState(m_settings->value("gui/state", saveState()).toByteArray());
     }
 
+    //IF panadapter settings
+    bool if_conv_ok;
+    d_fixed_hw_frequency = m_settings->value("input/if_frequency", 0).toLongLong(&if_conv_ok);
+    if(if_conv_ok){
+        d_fixed_hw_freq = m_settings->value("input/use_fixed_hw_freq", false).toBool();
+    }
+    
     QString indev = m_settings->value("input/device", "").toString();
     if (!indev.isEmpty())
     {
@@ -818,20 +825,14 @@ void MainWindow::updateGainStages(bool read_from_device)
  */
 void MainWindow::setNewFrequency(qint64 rx_freq)
 {
-    std::cout << "setNewFrequency rx_freq ";
-            std::cout << rx_freq << std::endl;
     double hw_freq = 0;
     if(!d_fixed_hw_freq){
        hw_freq = (double)(rx_freq - d_lnb_lo) - rx->get_filter_offset();
     }else{
-       hw_freq = 8830000; //set to fixed IF.
+       hw_freq = (double)d_fixed_hw_frequency; //set to fixed IF.
     }
-    std::cout << "setNewFrequency hw_freq ";
-            std::cout << hw_freq << std::endl;
     qint64 center_freq = rx_freq - (qint64)rx->get_filter_offset();
-    std::cout << "setNewFrequency center_freq ";
-            std::cout << center_freq << std::endl;
-
+    
     d_hw_freq = (qint64)hw_freq;
 
     // set receiver frequency
@@ -850,13 +851,7 @@ void MainWindow::setNewFrequency(qint64 rx_freq)
  */
 void MainWindow::setLnbLo(double freq_mhz)
 {
-    std::cout << "setLnbLo freq_mhz ";
-            std::cout << freq_mhz << std::endl;
     d_lnb_lo = qint64(freq_mhz*1e6);
-    // calculate current RF frequency
-    //qint64 rf_freq = ui->freqCtrl->getFrequency() - d_lnb_lo;
-    std::cout << "setLnbLo rf_freq ";
-            std::cout << d_lnb_lo + d_hw_freq << std::endl;
     
     qDebug() << "New LNB LO:" << d_lnb_lo << "Hz";
 
@@ -885,9 +880,6 @@ void MainWindow::setAntenna(const QString antenna)
  */
 void MainWindow::setFilterOffset(qint64 freq_hz)
 {
-    std::cout << "setFilterOffset freq_hz d_lnb_lo";
-            std::cout << freq_hz << " " << d_lnb_lo << std::endl;
-
     if(d_fixed_hw_freq){
        double offset = (d_lnb_lo + freq_hz)/1e6;
        freq_hz = 0;
@@ -897,12 +889,9 @@ void MainWindow::setFilterOffset(qint64 freq_hz)
     rx->set_filter_offset((double) freq_hz);
     ui->plotter->setFilterOffset(freq_hz);
     
-
     updateFrequencyRange();
     
     qint64 rx_freq = d_hw_freq + d_lnb_lo + freq_hz;
-    std::cout << "setFilterOffset rx_freq d_hw_freq d_lnb_lo ";
-            std::cout << rx_freq << " " << d_hw_freq << " " << d_lnb_lo << std::endl;
     ui->freqCtrl->setFrequency(rx_freq);
 
     if (rx->is_rds_decoder_active()) {
